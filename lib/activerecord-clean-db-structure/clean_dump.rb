@@ -33,7 +33,7 @@ module ActiveRecordCleanDbStructure
       dump.gsub!(/^COMMENT ON EXTENSION .*/, '')
 
       # Remove useless, version-specific parts of comments
-      dump.gsub!(/^-- (.*); Schema: ([\w_\.]+|-); Owner: -.*/, '-- \1')
+      dump.gsub!(/^-- (.*); Schema: ([\w_.]+|-); Owner: -.*/, '-- \1')
 
       # Remove useless comment lines
       dump.gsub!(/^--$/, '')
@@ -46,17 +46,17 @@ module ActiveRecordCleanDbStructure
         dump.gsub!(/^    id bigint NOT NULL(,)?$/, '    id BIGSERIAL PRIMARY KEY\1')
         dump.gsub!(/^    id uuid DEFAULT ([\w_]+\.)?uuid_generate_v4\(\) NOT NULL(,)?$/, '    id uuid DEFAULT \1uuid_generate_v4() PRIMARY KEY\2')
         dump.gsub!(/^    id uuid DEFAULT ([\w_]+\.)?gen_random_uuid\(\) NOT NULL(,)?$/, '    id uuid DEFAULT \1gen_random_uuid() PRIMARY KEY\2')
-        dump.gsub!(/^CREATE SEQUENCE [\w\.]+_id_seq\s+(AS integer\s+)?START WITH 1\s+INCREMENT BY 1\s+NO MINVALUE\s+NO MAXVALUE\s+CACHE 1;$/, '')
-        dump.gsub!(/^ALTER SEQUENCE [\w\.]+_id_seq OWNED BY .*;$/, '')
-        dump.gsub!(/^ALTER TABLE ONLY [\w\.]+ ALTER COLUMN id SET DEFAULT nextval\('[\w\.]+_id_seq'::regclass\);$/, '')
-        dump.gsub!(/^ALTER TABLE ONLY [\w\.]+\s+ADD CONSTRAINT [\w\.]+_pkey PRIMARY KEY \(id\);$/, '')
+        dump.gsub!(/^CREATE SEQUENCE [\w.]+_id_seq\s+(AS integer\s+)?START WITH 1\s+INCREMENT BY 1\s+NO MINVALUE\s+NO MAXVALUE\s+CACHE 1;$/, '')
+        dump.gsub!(/^ALTER SEQUENCE [\w.]+_id_seq OWNED BY .*;$/, '')
+        dump.gsub!(/^ALTER TABLE ONLY [\w.]+ ALTER COLUMN id SET DEFAULT nextval\('[\w.]+_id_seq'::regclass\);$/, '')
+        dump.gsub!(/^ALTER TABLE ONLY [\w.]+\s+ADD CONSTRAINT [\w.]+_pkey PRIMARY KEY \(id\);$/, '')
         dump.gsub!(/^-- Name: (\w+\s+)?id; Type: DEFAULT$/, '')
         dump.gsub!(/^-- .*_id_seq; Type: SEQUENCE.*/, '')
         dump.gsub!(/^-- Name: (\w+\s+)?\w+_pkey; Type: CONSTRAINT$/, '')
       end
 
       # Remove inherited tables
-      inherited_tables_regexp = /-- Name: ([\w_\.]+); Type: TABLE\n\n[^;]+?INHERITS \([\w_\.]+\);/m
+      inherited_tables_regexp = /-- Name: ([\w_.]+); Type: TABLE\n\n[^;]+?INHERITS \([\w_.]+\);/m
       inherited_tables = dump.scan(inherited_tables_regexp).map(&:first)
       dump.gsub!(inherited_tables_regexp, '')
       inherited_tables.each do |inherited_table|
@@ -73,18 +73,18 @@ module ActiveRecordCleanDbStructure
       partitioned_tables = []
 
       # Postgres 12 pg_dump will output separate ATTACH PARTITION statements (even when run against an 11 or older server)
-      partitioned_tables_regexp1 = /ALTER TABLE ONLY [\w_\.]+ ATTACH PARTITION ([\w_\.]+)/
+      partitioned_tables_regexp1 = /ALTER TABLE ONLY [\w_.]+ ATTACH PARTITION ([\w_.]+)/
       partitioned_tables += dump.scan(partitioned_tables_regexp1).map(&:last)
 
       # Earlier versions use an inline PARTITION OF
-      partitioned_tables_regexp2 = /-- Name: ([\w_\.]+); Type: TABLE\n\n[^;]+?PARTITION OF [\w_\.]+\n[^;]+?;/m
+      partitioned_tables_regexp2 = /-- Name: ([\w_.]+); Type: TABLE\n\n[^;]+?PARTITION OF [\w_.]+\n[^;]+?;/m
       partitioned_tables += dump.scan(partitioned_tables_regexp2).map(&:first)
 
       partitioned_tables.each do |partitioned_table|
         partitioned_schema_name, partitioned_table_name_only = partitioned_table.split('.', 2)
         dump.gsub!(/-- Name: #{partitioned_table_name_only}; Type: TABLE/, '')
         dump.gsub!(/CREATE TABLE #{partitioned_table} \([^;]+;/m, '')
-        dump.gsub!(/ALTER TABLE ONLY ([\w_\.]+) ATTACH PARTITION #{partitioned_table}[^;]+;/m, '')
+        dump.gsub!(/ALTER TABLE ONLY ([\w_.]+) ATTACH PARTITION #{partitioned_table}[^;]+;/m, '')
 
         dump.gsub!(/ALTER TABLE ONLY ([\w_]+\.)?#{partitioned_table}[^;]+;/, '')
         dump.gsub!(/-- Name: #{partitioned_table} [^;]+; Type: DEFAULT/, '')
@@ -94,7 +94,7 @@ module ActiveRecordCleanDbStructure
           partitioned_table_index = m[1]
           dump.gsub!("-- Name: #{partitioned_table_index}; Type: INDEX ATTACH", '')
           dump.gsub!("-- Name: #{partitioned_table_index}; Type: INDEX", '')
-          dump.gsub!(/ALTER INDEX ([\w_\.]+) ATTACH PARTITION ([\w_]+\.)?#{partitioned_table_index};/, '')
+          dump.gsub!(/ALTER INDEX ([\w_.]+) ATTACH PARTITION ([\w_]+\.)?#{partitioned_table_index};/, '')
         end
         dump.gsub!(index_regexp, '')
 
@@ -178,7 +178,7 @@ module ActiveRecordCleanDbStructure
     # - places the semicolon on a separate last line
     def schema_migrations_cleanup
       # Read all schema_migrations values from the dump.
-      values = dump.scan(/^(\(\'\d{14}\'\))[,;]\n/).flatten.sort
+      values = dump.scan(/^(\('\d{14}'\))[,;]\n/).flatten.sort
 
       # Replace the schema_migrations values.
       dump.sub!(
