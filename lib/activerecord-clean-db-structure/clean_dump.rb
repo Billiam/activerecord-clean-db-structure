@@ -121,7 +121,7 @@ module ActiveRecordCleanDbStructure
         dump.gsub!(/^CREATE( UNIQUE)? INDEX \w+ ON .+\n+/, '')
         dump.gsub!(/^-- Name: \w+; Type: INDEX\n+/, '')
         indexes.each do |table, indexes_for_table|
-          dump.gsub!(/^(CREATE TABLE #{table}\b(:?[^;\n]*\n)+\);\n)/) { $1 + "\n" + indexes_for_table }
+          dump.gsub!(/^(CREATE TABLE #{table}\b(:?[^;\n]*\n)+[^\n]*?\);\n)/) { $1 + "\n" + indexes_for_table }
         end
       end
 
@@ -148,8 +148,8 @@ module ActiveRecordCleanDbStructure
           inside_table = true
           columns = []
           result << source_line
-        elsif source_line.start_with?(");")
-          if inside_table
+        elsif inside_table
+          if source_line.chomp.start_with?(")")
             inside_table = false
             columns.sort_by!(&:first)
 
@@ -158,11 +158,10 @@ module ActiveRecordCleanDbStructure
             end
 
             result << without_column_separator[columns.last[1]]
+            result << source_line
+          else
+            columns << [parse_column_name[source_line], source_line]
           end
-
-          result << source_line
-        elsif inside_table
-          columns << [parse_column_name[source_line], source_line]
         else
           result << source_line
         end
