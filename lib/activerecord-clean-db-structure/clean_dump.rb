@@ -34,7 +34,7 @@ module ActiveRecordCleanDbStructure
 
       extensions_to_remove = ["pg_stat_statements", "pg_buffercache"]
       if options[:keep_extensions] == :all
-        extensions_to_remove = [] 
+        extensions_to_remove = []
       elsif options[:keep_extensions]
         extensions_to_remove -= Array(options[:keep_extensions])
       end
@@ -58,12 +58,12 @@ module ActiveRecordCleanDbStructure
         # This is a bit optimistic, but works as long as you don't have an id field thats not a sequence/uuid
         dump.gsub!(/^    id integer NOT NULL(,)?$/, '    id SERIAL PRIMARY KEY\1')
         dump.gsub!(/^    id bigint NOT NULL(,)?$/, '    id BIGSERIAL PRIMARY KEY\1')
-        dump.gsub!(/^    id uuid DEFAULT ([\w]+\.)?uuid_generate_v4\(\) NOT NULL(,)?$/, '    id uuid DEFAULT \1uuid_generate_v4() PRIMARY KEY\2')
-        dump.gsub!(/^    id uuid DEFAULT ([\w]+\.)?gen_random_uuid\(\) NOT NULL(,)?$/, '    id uuid DEFAULT \1gen_random_uuid() PRIMARY KEY\2')
-        dump.gsub!(/^CREATE SEQUENCE [\w\.]+_id_seq\s+(AS integer\s+)?START WITH 1\s+INCREMENT BY 1\s+NO MINVALUE\s+NO MAXVALUE\s+CACHE 1;$/, '')
-        dump.gsub!(/^ALTER SEQUENCE [\w\.]+_id_seq OWNED BY .*;$/, '')
-        dump.gsub!(/^ALTER TABLE ONLY [\w\.]+ ALTER COLUMN id SET DEFAULT nextval\('[\w\.]+_id_seq'::regclass\);$/, '')
-        dump.gsub!(/^ALTER TABLE ONLY [\w\.]+\s+ADD CONSTRAINT [\w\.]+_pkey PRIMARY KEY \(id\);$/, '')
+        dump.gsub!(/^    id uuid DEFAULT (\w+\.)?uuid_generate_v4\(\) NOT NULL(,)?$/, '    id uuid DEFAULT \1uuid_generate_v4() PRIMARY KEY\2')
+        dump.gsub!(/^    id uuid DEFAULT (\w+\.)?gen_random_uuid\(\) NOT NULL(,)?$/, '    id uuid DEFAULT \1gen_random_uuid() PRIMARY KEY\2')
+        dump.gsub!(/^CREATE SEQUENCE [\w.]+_id_seq\s+(AS integer\s+)?START WITH 1\s+INCREMENT BY 1\s+NO MINVALUE\s+NO MAXVALUE\s+CACHE 1;$/, '')
+        dump.gsub!(/^ALTER SEQUENCE [\w.]+_id_seq OWNED BY .*;$/, '')
+        dump.gsub!(/^ALTER TABLE ONLY [\w.]+ ALTER COLUMN id SET DEFAULT nextval\('[\w.]+_id_seq'::regclass\);$/, '')
+        dump.gsub!(/^ALTER TABLE ONLY [\w.]+\s+ADD CONSTRAINT [\w.]+_pkey PRIMARY KEY \(id\);$/, '')
         dump.gsub!(/^-- Name: (\w+\s+)?id; Type: DEFAULT; Schema: \w+$/, '')
         dump.gsub!(/^-- .*_id_seq; Type: SEQUENCE.*/, '')
         dump.gsub!(/^-- Name: (\w+\s+)?\w+_pkey; Type: CONSTRAINT; Schema: \w+$/, '')
@@ -71,7 +71,7 @@ module ActiveRecordCleanDbStructure
     end
 
     def clean_inherited_tables
-      inherited_tables_regexp = /-- Name: ([\w\.]+); Type: TABLE; Schema: \w+\n\n[^;]+?INHERITS \([\w\.]+\);/m
+      inherited_tables_regexp = /-- Name: ([\w.]+); Type: TABLE; Schema: \w+\n\n[^;]+?INHERITS \([\w.]+\);/m
       inherited_tables = dump.scan(inherited_tables_regexp).map(&:first)
       dump.gsub!(inherited_tables_regexp, '')
       inherited_tables.each do |inherited_table|
@@ -98,11 +98,11 @@ module ActiveRecordCleanDbStructure
       partitioned_tables = []
 
       # Postgres 12 pg_dump will output separate ATTACH PARTITION statements (even when run against an 11 or older server)
-      partitioned_tables_regexp1 = /ALTER TABLE ONLY [\w\.]+ ATTACH PARTITION ([\w\.]+)/
+      partitioned_tables_regexp1 = /ALTER TABLE ONLY [\w.]+ ATTACH PARTITION ([\w.]+)/
       partitioned_tables += dump.scan(partitioned_tables_regexp1).map(&:last)
 
       # Earlier versions use an inline PARTITION OF
-      partitioned_tables_regexp2 = /-- Name: ([\w\.]+); Type: TABLE\n\n[^;]+?PARTITION OF [\w\.]+\n[^;]+?;/m
+      partitioned_tables_regexp2 = /-- Name: ([\w.]+); Type: TABLE\n\n[^;]+?PARTITION OF [\w.]+\n[^;]+?;/m
       partitioned_tables += dump.scan(partitioned_tables_regexp2).map(&:first)
 
       # We assume that a comment + schema statement pair has 3 trailing newlines.
@@ -118,7 +118,7 @@ module ActiveRecordCleanDbStructure
       @dump << "\n" if @dump[-1] != "\n"
 
       # This is mostly done to allow restoring Postgres 11 output on Postgres 10
-      dump.gsub!(/CREATE INDEX ([\w]+) ON ONLY/, 'CREATE INDEX \\1 ON')
+      dump.gsub!(/CREATE INDEX (\w+) ON ONLY/, 'CREATE INDEX \\1 ON')
     end
 
     def clean_options
@@ -203,7 +203,7 @@ module ActiveRecordCleanDbStructure
     # - places the semicolon on a separate last line
     def schema_migrations_cleanup
       # Read all schema_migrations values from the dump.
-      values = dump.scan(/^(\(\'\d{14}\'\))[,;]\n/).flatten.sort
+      values = dump.scan(/^(\('\d{14}'\))[,;]\n/).flatten.sort
 
       # Replace the schema_migrations values.
       dump.sub!(
